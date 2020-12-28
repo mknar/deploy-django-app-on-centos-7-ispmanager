@@ -1,0 +1,223 @@
+---- Deploying django project for centos7 platform in servers nginix gunicorn(wsgi) ----
+
+Server control panel: ISPmanager (install ISPmanager: https://docs.ispsystem.com/ispmanager-lite/installation/ispmanager-installation-guide)
+
+--Steps--
+1. Updating centos7
+
+	sudo yum check-update
+	sudo yum update
+
+
+2. install ISPmanager
+
+	sudo yum install wget
+	wget http://download.ispsystem.com/install.sh
+	sh install.sh ISPmanager
+
+
+3. install the appropriate python version for your django project
+
+	sudo yum install gcc openssl-devel bzip2-devel libffi-devel zlib-devel sqlite-devel
+	cd /opt
+	wget https://www.python.org/ftp/python/3.9.1/Python-3.9.1.tgz
+	tar -xzf Python-3.9.1.tgz
+	cd Python-3.9.1/
+	./configure --enable-optimizations
+	sudo make altinstall
+
+	ln -s /usr/local/bin/python3.9 /usr/bin/python3.9
+	ln -s /usr/local/bin/pip3.9 /usr/bin/pip3.9
+
+	pip3.9 install virtualenv
+
+4. Сreate virtualenv using a specific version of python
+
+-- crate ispmanager accaunt and www-doman --
+	virtualenv --python=/usr/bin/python3.9 /var/www/solar/data/www/solar.com/myvenv
+	cd /var/www/solar/data/www/solar.com/
+	source myvenv/bin/activate
+	pip install --upgrade pip
+	pip -V
+	pip freeze > requirements.txt
+
+-- add package names and version to file requirements.txt –
+	pip install -r requirements.txt
+	python manage.py runserver
+
+
+___________________________________________________________________
+
+!!!!!!  ERROR ModuleNotFoundError: No module named '_sqlite3'  !!!!!!
+--the solution of the problem—
+1. Install the sqlite-devel package:
+	yum install sqlite-devel -y
+
+-- Recompile python from the source—
+	cd /opt
+	cd Python-3.9.1/
+	./configure --enable-loadable-sqlite-extensions --enable-optimizations
+	make
+	sudo make altinstall
+
+2. Install the sqlite-devel package prior to installing python 3.9
+_____________________________________________________________________________
+
+
+5. Install SQLite
+	https://www.sqlite.org/2020/sqlite-tools-linux-x86-3340000.zip
+	cd /opt
+	wget https://www.sqlite.org/2020/sqlite-autoconf-3340000.tar.gz
+	tar -xzf sqlite-autoconf-3340000.tar.gz
+	cd sqlite-autoconf-3340000/
+	./configure
+	make
+	sudo make install
+
+--!warning: install sqlite 3.34 before installing python—
+	cd /opt/Python-3.9.1
+	LD_RUN_PATH=/usr/local/lib  ./configure
+	LD_RUN_PATH=/usr/local/lib make
+	LD_RUN_PATH=/usr/local/lib make altinstall
+
+	python -c "import sqlite3; print(sqlite3.sqlite_version)"
+	export LD_LIBRARY_PATH="/usr/local/lib"
+
+
+6. install and congigurate gunicorn
+	cd /var/www/solar/data/www/solar.com/
+	source myvenv/bin/activate
+	pip install gunicorn
+	pip freeze > requirements.txt
+
+
+crate gonicorn_config.py in root directory, example:
+
+	command = '/var/www/solar/data/www/solar.com/myvenv/bin/gunicorn'
+	pythonpath = '/var/www/solar/data/www/solar.com/Project_Solar/'
+	bind = '127.0.0.1:8001'
+	workers = 1
+	user = 'solar'
+	limit_request_fields = 32000
+	limit_request_field_size = 1024
+	raw_env = 'DJANGO_SETTINGS_MODULE=Project_Solar.settings'
+
+
+
+configurate gunicorn and nginix
+change Nginx config in www-domain config button, add this config in server { }:
+
+	location / {
+	    proxy_pass http://127.0.0.1:8001;
+	    proxy_set_header X-Forwarded-Host $server_name;
+	    proxy_set_header X-Real-IP $remote_addr;
+	    add_header P3P 'CP="ALL DSP COR PSAa PSDa OUR NOR ONL UNI COM NAV"';
+	    add_header Access-Control-Allow-Origin *;
+	}
+	location /static {    
+        autoindex on;    
+        alias /var/www/solar/data/www/solar.com/static;    
+    }
+
+
+
+
+7. install and congigurate supervisor
+
+	sudo yum install supervisor
+
+Next we need to set “Supervisor” to run automatically every time you restart your machine, we need to create /etc/rc.d/init.d/supervisord with the following content:
+
+	#!/bin/sh
+	#
+	# /etc/rc.d/init.d/supervisord
+	#
+	# Supervisor is a client/server system that
+	# allows its users to monitor and control a
+	# number of processes on UNIX-like operating
+	# systems.
+	#
+	# chkconfig: - 64 36
+	# description: Supervisor Server
+	# processname: supervisord
+
+	# Source init functions
+	. /etc/rc.d/init.d/functions
+
+	prog="supervisord"
+
+	prefix="/usr/local/"
+	exec_prefix="${prefix}"
+	prog_bin="${exec_prefix}/bin/supervisord"
+	PIDFILE="/var/run/$prog.pid"
+
+	start()
+	{
+       		echo -n $"Starting $prog: "
+       		daemon $prog_bin --pidfile $PIDFILE -c /etc/supervisor/supervisord.conf
+       		[ -f $PIDFILE ] && success $"$prog startup" || failure $"$prog startup"
+       		echo
+	}
+
+	stop()
+	{
+       		echo -n $"Shutting down $prog: "
+       		[ -f $PIDFILE ] && killproc $prog || success $"$prog shutdown"
+       		echo
+	}
+
+	case "$1" in
+
+	 start)
+	   start
+ 	;;
+
+ 	stop)
+  	 stop
+ 	;;
+
+ 	status)
+       	status $prog
+	 ;;
+
+ 	restart)
+   	stop
+   	start
+ 	;;
+
+ 	*)
+	   echo "Usage: $0 {start|stop|restart|status}"
+	 ;;
+
+	esac
+
+
+
+
+Then make sure CentOS knows about it:
+
+	sudo chmod +x /etc/rc.d/init.d/supervisord
+	sudo chkconfig --add supervisord
+	sudo chkconfig supervisord on
+	sudo service supervisord start
+
+
+
+Go to directory /etc/supervisord.d/ and create your project config file myapp.ini
+Here is a sample of Django App to be controlled and monitored by Supervisor, just put it: 
+
+	[program:solar]
+	directory=/var/www/solar/data/www/solar.com
+	command=/var/www/solar/data/www/solar.com/myvenv/bin/gunicorn Project_Solar.wsgi:application -c /var/www/solar/data/www/solar.com/gunicorn_config.py -b 127.0.0.1:8001 --workers 3 --max-requests 100000
+	environment=PYTHONPATH=/var/www/solar/data/www/solar.com/myvenv/bin/
+	# UNIX Socket version (better with Nginx)
+	#command=/var/www/solar/data/www/solar.com/myvenv/bin/gunicorn Project_Solar.wsgi:application -b unix:/tmp/solar.sock --workers 3  --max-requests 1000
+	user=solar
+	autostart=true
+	autorestart=true
+	redirect_stderr=True
+
+
+
+
+
