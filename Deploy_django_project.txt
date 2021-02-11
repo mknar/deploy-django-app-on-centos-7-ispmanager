@@ -125,7 +125,8 @@ configurate gunicorn and nginix (SSL)
 Nginx FULL config example
 
 server {
-	server_name textura.atalyanstudio.am ;
+	server_name textura.atalyanstudio.am;
+	return 301 https://$server_name$request_uri;
 	charset off;
 	disable_symlinks if_not_owner from=$root_path;
 	include /etc/nginx/vhosts-includes/*.conf;
@@ -145,16 +146,18 @@ server {
 		}
 	}
 	location /static {    
-        autoindex on;    
+        autoindex off;
         alias /var/www/atalyanstudio/data/www/textura.atalyanstudio.am/static;    
     }
-	return 301 https://$host:443$request_uri;
 	listen 164.68.106.240:80;
 }
+
 server {
-	server_name textura.atalyanstudio.am ;
-	ssl_certificate "/var/www/httpd-cert/atalyanstudio/textura.atalyanstudio.am_le1.crtca";
-	ssl_certificate_key "/var/www/httpd-cert/atalyanstudio/textura.atalyanstudio.am_le1.key";
+	listen 443 ssl;
+    	listen [::]:443 ssl;
+	server_name textura.atalyanstudio.am;
+	ssl_certificate "/var/www/httpd-cert/atalyanstudio/textura.atalyanstudio.am_le2.crtca";
+	ssl_certificate_key "/var/www/httpd-cert/atalyanstudio/textura.atalyanstudio.am_le2.key";
 	ssl_ciphers EECDH:+AES256:-3DES:RSA+AES:!NULL:!RC4;
 	ssl_prefer_server_ciphers on;
 	ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
@@ -178,8 +181,8 @@ server {
 		}
 	}
 	location /static {    
-        autoindex on;    
-        alias /var/www/atalyanstudio/data/www/textura.atalyanstudio.am/static;    
+        autoindex off;    
+        alias /var/www/atalyanstudio/data/www/textura.atalyanstudio.am/static;
     }
 	listen 164.68.106.240:443 ssl http2;
 }
