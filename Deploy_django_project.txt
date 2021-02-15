@@ -125,8 +125,9 @@ configurate gunicorn and nginix (SSL)
 Nginx FULL config example
 
 server {
+    listen 80;
 	server_name textura.atalyanstudio.am;
-	return 301 https://$server_name$request_uri;
+	return 301 https://www.textura.atalyanstudio.am$request_uri;
 	charset off;
 	disable_symlinks if_not_owner from=$root_path;
 	include /etc/nginx/vhosts-includes/*.conf;
@@ -135,27 +136,11 @@ server {
 	error_log /var/www/httpd-logs/textura.atalyanstudio.am.error.log notice;
 	set $root_path /var/www/atalyanstudio/data/www/textura.atalyanstudio.am;
 	root $root_path;
-	location / {
-	    proxy_pass http://127.0.0.1:8004;
-	    proxy_set_header X-Forwarded-Host $server_name;
-	    proxy_set_header X-Real-IP $remote_addr;
-	    add_header P3P 'CP="ALL DSP COR PSAa PSDa OUR NOR ONL UNI COM NAV"';
-	    add_header Access-Control-Allow-Origin *;
-		location ~* ^.+\.(jpg|jpeg|gif|png|svg|js|css|mp3|ogg|mpe?g|avi|zip|gz|bz2?|rar|swf)$ {
-			expires 0s;
-		}
-	}
-	location /static {    
-        autoindex off;
-        alias /var/www/atalyanstudio/data/www/textura.atalyanstudio.am/static;    
-    }
 	listen 164.68.106.240:80;
 }
 
 server {
-	listen 443 ssl;
-    	listen [::]:443 ssl;
-	server_name textura.atalyanstudio.am;
+	server_name www.textura.atalyanstudio.am textura.atalyanstudio.am ;
 	ssl_certificate "/var/www/httpd-cert/atalyanstudio/textura.atalyanstudio.am_le2.crtca";
 	ssl_certificate_key "/var/www/httpd-cert/atalyanstudio/textura.atalyanstudio.am_le2.key";
 	ssl_ciphers EECDH:+AES256:-3DES:RSA+AES:!NULL:!RC4;
@@ -172,7 +157,6 @@ server {
 	root $root_path;
 	location / {
 	    proxy_pass http://127.0.0.1:8004;
-	    proxy_set_header X-Forwarded-Host $server_name;
 	    proxy_set_header X-Real-IP $remote_addr;
 	    add_header P3P 'CP="ALL DSP COR PSAa PSDa OUR NOR ONL UNI COM NAV"';
 	    add_header Access-Control-Allow-Origin *;
