@@ -147,7 +147,7 @@ server {
 	    proxy_set_header Host $host;
 	    add_header P3P 'CP="ALL DSP COR PSAa PSDa OUR NOR ONL UNI COM NAV"';
 	    add_header Access-Control-Allow-Origin *;
-		location ~* ^.+\.(jpg|jpeg|gif|png|svg|js|css|mp3|ogg|mpe?g|avi|zip|gz|bz2?|rar|swf)$ {
+		location ~* ^.+\.(jpg|jpeg|gif|png|svg|js|css|webp|mp3|ogg|mpe?g|avi|zip|gz|bz2?|rar|swf)$ {
 			expires 0s;
 		}
 	}
@@ -181,7 +181,7 @@ server {
 	    proxy_set_header Host $host;
 	    add_header P3P 'CP="ALL DSP COR PSAa PSDa OUR NOR ONL UNI COM NAV"';
 	    add_header Access-Control-Allow-Origin *;
-		location ~* ^.+\.(jpg|jpeg|gif|png|svg|js|css|mp3|ogg|mpe?g|avi|zip|gz|bz2?|rar|swf)$ {
+		location ~* ^.+\.(jpg|jpeg|gif|png|svg|js|css|webp|mp3|ogg|mpe?g|avi|zip|gz|bz2?|rar|swf)$ {
 			expires 0s;
 		}
 	}
